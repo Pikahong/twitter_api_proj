@@ -1,3 +1,4 @@
+from math import e
 import sys
 import pandas as pd
 import json
@@ -26,16 +27,17 @@ def get_all_tweets(screen_name):
         # To get the full text of the Retweet, dive into 'retweeted_status'.
         is_retweet = hasattr(status, 'retweeted_status') # Check if retweeted_status includes
         # change the status root to retweeted_status
+        tweets['screen_name'].append(status.user.screen_name)
         if is_retweet:
             status = status.retweeted_status
+            tweets['retweet_screen_name'].append(status.user.screen_name)
+        else:
+            tweets['retweet_screen_name'].append(None)
         tweets['tweet_id'].append(status.id)
         tweets['body'].append(status.full_text)
         tweets['created_at'].append(status.created_at)
-        tweets['screen_name'].append(status.user.screen_name)
         tweets['user_id'].append(status.user.id)
         tweets['favorite_count'].append(status.favorite_count)
-        # additional information
-        tweets['is_retweet'].append(is_retweet)
         
     df = pd.DataFrame(tweets)
 
@@ -54,6 +56,7 @@ def get_all_tweets(screen_name):
     #     fh.write(json_obj)
 
     # Save to a csv file for debugging
+    print(df)
     df.to_csv('data.csv')
 
 
@@ -73,6 +76,7 @@ def get_user_profiles(screen_name):
     users['statuses_count'].append(user.statuses_count)
 
     df = pd.DataFrame(users)
+    print(df)
 
     # Not work for updating tables
     try:
@@ -93,6 +97,29 @@ def get_user_profiles(screen_name):
     # for follower in user.followers():
     #     print(follower.name)
 
+import pprint
+keywords = []
+with open('keywords.txt', 'r') as fh:
+    keywords = [line.strip().lower() for line in fh]
+
+# convert a list into a single sql command for where clause
+sql_keywords = ' OR '.join([f'body LIKE \'%{kw.strip().lower()}%\'' for kw in keywords])
+
+import re
+# Read data(body) based on keywords
+def read_data(screen_name):
+    try:
+        cur = con.cursor()
+        cur.execute(f"SELECT body FROM tweets WHERE UPPER(screen_name)=UPPER('{screen_name}') AND ({sql_keywords})")
+        result = cur.fetchall()
+        df = pd.DataFrame(result, columns=['Result'])
+        df['Keyword'] = df['Result'].str.extract("(" + "|".join(keywords) + ")", expand=False, flags=re.I)
+        df.to_csv()
+        print(df)
+
+    except Exception as e:
+        print(e)
+
 
 if __name__ == '__main__':
     # implement as a simple command line tool
@@ -106,3 +133,5 @@ if __name__ == '__main__':
         if sys.argv[1] == '-u':
             get_user_profiles(sys.argv[2])
 
+        if sys.argv[1] == '-r':
+            read_data(sys.argv[2])

@@ -1,8 +1,10 @@
+import re
 import sys
 import pandas as pd
 import json
 import tweepy
 import sqlite3
+from collections import defaultdict
 from config import create_api
 from database import create_db
 
@@ -13,10 +15,12 @@ pd.set_option('display.max_columns', None)
 con = create_db(log=False)
 api = create_api()
 
+
 def get_all_tweets(screen_name):
     """ Get all tweets by screen_name. Max tweets up to 3250, retricted by Twitter """
-    from collections import defaultdict
-    tweets = defaultdict(list) # Create a empty dict with default empty list as values
+    # tweet id can be repeated due to self-retweet. Can not set primary key to retweet_id
+    # Create a empty dict with default empty list as values
+    tweets = defaultdict(list)
 
     # status = tweet
     for status in tweepy.Cursor(api.user_timeline, screen_name=screen_name, tweet_mode="extended", count=200).items():
@@ -24,7 +28,8 @@ def get_all_tweets(screen_name):
         # the full_text attribute of the Status object may be truncated
         # with an ellipsis character instead of containing the full text of the Retweet.
         # To get the full text of the Retweet, dive into 'retweeted_status'.
-        is_retweet = hasattr(status, 'retweeted_status') # Check if retweeted_status includes
+        # Check if retweeted_status includes
+        is_retweet = hasattr(status, 'retweeted_status')
         # change the status root to retweeted_status
         tweets['screen_name'].append(status.user.screen_name)
         if is_retweet:
@@ -37,7 +42,7 @@ def get_all_tweets(screen_name):
         tweets['created_at'].append(status.created_at)
         tweets['user_id'].append(status.user.id)
         tweets['favorite_count'].append(status.favorite_count)
-        
+
     df = pd.DataFrame(tweets)
 
     # Not work for updating tables
@@ -48,7 +53,6 @@ def get_all_tweets(screen_name):
     except sqlite3.OperationalError as e:
         print(e)
 
-    
     # dump a json file to inspect the context
     # with open('test.json', 'w') as fh:
     #     json_obj = json.dumps(test[1]._json, indent=4, sort_keys=True)
@@ -61,9 +65,7 @@ def get_all_tweets(screen_name):
 
 def get_user_profiles(screen_name):
     """ Get user basic profiles by screen_name """
-    from collections import defaultdict
     users = defaultdict(list)
-    
     user = api.get_user(screen_name=screen_name)
     users['user_id'].append(user.id)
     users['screen_name'].append(user.screen_name)
@@ -96,24 +98,38 @@ def get_user_profiles(screen_name):
     # for follower in user.followers():
     #     print(follower.name)
 
-import pprint
+
 keywords = []
 with open('keywords.txt', 'r') as fh:
     keywords = [line.strip().lower() for line in fh]
 
-# convert a list into a single sql command for where clause
-sql_keywords = ' OR '.join([f'body LIKE \'%{kw.strip().lower()}%\'' for kw in keywords])
+# convert a list into a single sql command for filtering the keywords
+sql_keywords = ' OR '.join(
+    [f'body LIKE \'%{kw.strip().lower()}%\'' for kw in keywords])
 
-import re
+
+# Define a function to extract the keywords from a tweet
+
+def get_keywords(row):
+    matched_keywords = []
+    for kw in keywords:
+        if kw in row.lower():
+            matched_keywords.append(kw)
+    return matched_keywords
+
 # Read data(body) based on keywords
+
+
 def read_data(screen_name):
+    # @hashtag ?remove?
     try:
         cur = con.cursor()
-        cur.execute(f"SELECT body FROM tweets WHERE UPPER(screen_name)=UPPER('{screen_name}') AND ({sql_keywords})")
+        cur.execute(
+            f"SELECT body FROM tweets WHERE UPPER(screen_name)=UPPER('{screen_name}') AND ({sql_keywords})")
         result = cur.fetchall()
         df = pd.DataFrame(result, columns=['Result'])
-        df['Keyword'] = df['Result'].str.extract("(" + "|".join(keywords) + ")", expand=False, flags=re.I)
-        df.to_csv()
+        df['Keyword'] = df['Result'].apply(lambda row: get_keywords(row))
+        df.to_csv("READ.csv", index=False)
         print(df)
 
     except Exception as e:
@@ -121,16 +137,28 @@ def read_data(screen_name):
 
 
 if __name__ == '__main__':
-    # implement as a simple command line tool
+    # implement a simple command line interface
     if len(sys.argv) == 3:
-        # Get all tweets
-        # usage: python app.py -t [screen_name]
-        if sys.argv[1] == '-t':
-            get_all_tweets(sys.argv[2])
-        # Get user profile
-        # usage: python app.py -u [screen_name]
-        if sys.argv[1] == '-u':
-            get_user_profiles(sys.argv[2])
+        args_str = ' '.join(sys.argv[1:])
+        # Regex for matching the pattern : app.py [-utr] [screen_name]
+        r = re.compile('^-(?P<options>[utr]+)\s+(?P<arg>\w+)$')
+        m = r.match(args_str)
+        # If there are matches
+        if m is not None:
+            args_dict = m.groupdict()
+            # Get user profile
+            # usage: python app.py -u [screen_name]
+            if 'u' in args_dict['options']:
+                get_user_profiles(args_dict['arg'])
 
-        if sys.argv[1] == '-r':
-            read_data(sys.argv[2])
+            # Get all tweets
+            # usage: python app.py -t [screen_name]
+            if 't' in args_dict['options']:
+                get_all_tweets(args_dict['arg'])
+
+            if 'r' in args_dict['options']:
+                read_data(args_dict['arg'])
+        else:
+            print('Incorrect usage')
+
+    con.close()

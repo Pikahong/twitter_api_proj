@@ -1,0 +1,6 @@
+code_testing
+venv
+requirements.txt
+*.db
+*.csv
+__pycache__

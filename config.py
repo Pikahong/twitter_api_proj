@@ -1,5 +1,3 @@
-""" Read authentication credentials from keys,
-and create an tweepy api object """
 import tweepy
 import logging
 from credentials import get_key
@@ -9,6 +7,9 @@ logger = logging.getLogger()
 
 # Create a tweepy api object
 def create_api():
+    """ Read authentication credentials from keys,
+    and create an tweepy api object """
+    
     # Get the keys from credentials
     consumer_key = get_key('consumer_key')
     consumer_secret = get_key('consumer_secret')

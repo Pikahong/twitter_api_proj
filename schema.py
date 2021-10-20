@@ -21,9 +21,10 @@ tweets = '''
         body NVARCHAR(256),
         favorite_count INTEGER,
         retweet_screen_name NVARCHAR(32),
-        CONSTRAINT pk_tweet_id PRIMARY KEY (tweet_id),
         CONSTRAINT fk_user_id FOREIGN KEY (user_id) REFERENCES user_profiles(user_id)
     );
 '''
 
 tables_schema = [users_profile, tweets]
+
+# CONSTRAINT pk_tweet_id PRIMARY KEY (tweet_id),

@@ -1,6 +1,6 @@
 # **Project name: TwitterProject**
 ## **1. Analysis**
-Tweets of Joe Biden about discussing Coronavirus and vaccination on Twitter 
+Tweets of Joe Biden about discussing coronavirus and vaccination 
 
 ## **2. User Story**
 1. As a JDE, I would like to retrieve data from one of the popular social media Twitter and perform the ETL and analyze the data about Joe Biden mentioned Coronavirus and vaccination. Whether the mentioned post will have positive or negative impact on Joe Biden’s supporting rate and the number of persons receiving vaccine. 

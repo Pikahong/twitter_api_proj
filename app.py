@@ -100,7 +100,7 @@ def get_user_profiles(screen_name):
 
 
 keywords = []
-with open('keywords.txt', 'r') as fh:
+with open('keywords.txt', 'r', encoding="utf-8") as fh:
     keywords = [line.strip().lower() for line in fh]
 
 # convert a list into a single sql command for filtering the keywords

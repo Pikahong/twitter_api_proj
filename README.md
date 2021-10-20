@@ -18,3 +18,6 @@ Tweets of Joe Biden about discussing Coronavirus and vaccination on Twitter
 * Data Manipulation Library/Package: **Pandas**
 * SQLite Library: **sqlite3**
 * Database Schema: **Tweets, users_profile**
+
+## **5. Install Package**
+    python3 -m pip -r requirements.txt

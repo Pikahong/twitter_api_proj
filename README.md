@@ -17,4 +17,4 @@ Tweets of Joe Biden about discussing Coronavirus and vaccination on Twitter
 * Twitter Library/Package: **Tweepy**
 * Data Manipulation Library/Package: **Pandas**
 * SQLite Library: **sqlite3**
-* Database Schema: Tweets, users_profile
+* Database Schema: **Tweets, users_profile**

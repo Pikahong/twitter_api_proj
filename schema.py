@@ -14,17 +14,18 @@ users_profile = '''
 '''
 tweets = '''
     CREATE TABLE IF NOT EXISTS tweets (
+        created_at DATETIME NOT NULL,
         tweet_id NOT NULL,
         user_id INTEGER NOT NULL,
         screen_name NVARCHAR(32),
-        created_at DATETIME,
+        retweet_created_at DATETIME,
         body NVARCHAR(256),
         favorite_count INTEGER,
+        retweet_count INTEGER,
         retweet_screen_name NVARCHAR(32),
+        CONSTRAINT pk_tweet PRIMARY KEY (created_at, tweet_id),
         CONSTRAINT fk_user_id FOREIGN KEY (user_id) REFERENCES user_profiles(user_id)
     );
 '''
 
 tables_schema = [users_profile, tweets]
-
-# CONSTRAINT pk_tweet_id PRIMARY KEY (tweet_id),

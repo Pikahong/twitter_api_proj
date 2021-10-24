@@ -30,7 +30,7 @@ def get_all_tweets(screen_name):
         # the full_text attribute of the Status object may be truncated
         # with an ellipsis character instead of containing the full text of the Retweet
         # To get the full text of the Retweet, dive into 'retweeted_status'
-        # Check if retweeted_status exisits
+        # Check if retweeted_status exists
         is_retweet = hasattr(status, 'retweeted_status')
         # change the status root to retweeted_status
         tweets['screen_name'].append(status.user.screen_name)

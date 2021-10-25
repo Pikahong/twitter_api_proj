@@ -1,6 +1,4 @@
 Covid
-Covid19
-Covid-19
 Pandemic
 Vaccination
 Vaccine
@@ -12,5 +10,5 @@ Johnson
 Wuhan
 Virus
 Illness
-Pokemon
-ポケモン
+Dead
+@WHO

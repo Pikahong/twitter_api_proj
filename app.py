@@ -1,10 +1,13 @@
+from os import terminal_size
 import sys
 import re
+import time
 import json
 from datetime import datetime
-import numpy as np
+from typing import Counter
 import pandas as pd
 import matplotlib.pyplot as plt
+import seaborn as sns
 import tweepy
 from collections import defaultdict
 from config import create_api
@@ -12,6 +15,9 @@ from database import create_db
 
 # Show all columns when printing dataframe objects
 pd.set_option('display.max_columns', None)
+
+# Set seaborn style
+sns.set_theme(font_scale=0.65, palette="pastel")
 
 # Create DB Engine and API Object
 con = create_db(log=False)
@@ -77,7 +83,7 @@ def get_all_tweets(screen_name):
     print(df[['body', 'favorite_count']])
     df.to_csv('data.csv')
 
-
+# under construction
 def get_users_profile(screen_name):
     """ Get user basic profiles by screen_name """
     users = defaultdict(list)
@@ -93,6 +99,7 @@ def get_users_profile(screen_name):
 
     # Set primary key column as index
     df = pd.DataFrame(users).set_index(['user_id'])
+    print(df)
     # A temporary table for deleting the existing rows from tweets table
     df.to_sql('users_profile_tmp', con, index=True, if_exists='replace')
 
@@ -130,13 +137,13 @@ sql_keywords = ' OR '.join(
     [f'body LIKE \'%{kw.strip().lower()}%\'' for kw in keywords])
 
 
-# a helper function that extracts all the keywords from a tweet and store into a list
+# a helper function that extracts all the keywords from a tweet and store into a string
 def _get_keywords(row):
     matched_keywords = []
     for kw in keywords:
         if kw in row.lower():
             matched_keywords.append(kw)
-    return matched_keywords
+    return ','.join(matched_keywords)
 
 
 def read_data(screen_name):
@@ -148,20 +155,74 @@ def read_data(screen_name):
             WHERE UPPER(screen_name)=UPPER('{screen_name}')
             AND ({sql_keywords})
         """
-    sql2 = f"SELECT * FROM tweets WHERE UPPER(screen_name)=UPPER('{screen_name}')"
+    # sql2 = f"SELECT * FROM tweets WHERE UPPER(screen_name)=UPPER('{screen_name}')"
 
     try:
         cur = con.cursor()
         cur.execute(sql)
         result = cur.fetchall()
+        
         df = pd.DataFrame(result, columns=['Date', 'Result'])
         df['Date'] = df['Date'].astype('datetime64')
-        df['Keyword'] = df['Result'].apply(lambda row: _get_keywords(row))
+        df.set_index('Date', inplace=True)
+        df['Keywords'] = df['Result'].apply(lambda row: _get_keywords(row))
         df.to_csv("READ.csv", index=False)
         print(df)
 
+        # count the keywords
+        cnt = Counter()
+        for kws in df.Keywords:
+            for kw in kws.split(','):
+                cnt[kw] += 1
+        print(dict(cnt))
+
+        # Visualize the top 10 keywords
+        cnt_top10 = dict(cnt.most_common(10))
+        plt.bar(cnt_top10.keys(), cnt_top10.values())
+        plt.title('Top 10 Occurrence of Keywords')
+        plt.xlabel('Keywords')
+        plt.ylabel('Count')
+        plt.show()
+
     except Exception as e:
         print(e)
+
+
+def get_followers(screen_name):
+    """ Get followers by screen_name """
+    followers = defaultdict(list)
+
+    for follower in tweepy.Cursor(api.get_followers, screen_name=screen_name).items():
+        if follower.startwith('Rate limit reached'):
+            print(follower)
+            break
+        else:
+            follower['user_id'].append(follower.id)
+            follower['screen_name'].append(follower.screen_name)
+            follower['name'].append(follower.name)
+            follower['location'].append(follower.location)
+            follower['description'].append(follower.description)
+            follower['followers_count'].append(follower.followers_count)
+            follower['friends_count'].append(follower.friends_count)
+            follower['statuses_count'].append(follower.statuses_count)
+
+    # Set primary key column as index
+    df = pd.DataFrame(followers).set_index(['user_id'])
+    print(df)
+    # # A temporary table for deleting the existing rows from tweets table
+    # df.to_sql('users_profile_tmp', con, index=True, if_exists='replace')
+
+    # try:
+    #     # delete rows that we are going to update
+    #     con.execute(
+    #         'DELETE FROM users_profile WHERE user_id IN (SELECT user_id FROM users_profile_tmp)')
+    #     con.commit()
+
+    #     # insert and update table
+    #     df.to_sql('users_profile', con, index=True, if_exists='append')
+    # except Exception as e:
+    #     print(e)
+    #     con.rollback()
 
 
 if __name__ == '__main__':
@@ -169,7 +230,7 @@ if __name__ == '__main__':
     if len(sys.argv) == 3:
         args_str = ' '.join(sys.argv[1:])
         # Regex for matching the pattern : app.py [-utr] [screen_name]
-        r = re.compile('^-(?P<options>[utr]+)\s+(?P<arg>\w+)$')
+        r = re.compile('^-(?P<options>[utfr]+)\s+(?P<arg>\w+)$')
         m = r.match(args_str)
         # If there are matches
         if m is not None:
@@ -184,27 +245,17 @@ if __name__ == '__main__':
             if 't' in args_dict['options']:
                 get_all_tweets(args_dict['arg'])
 
+            if 'f' in args_dict['options']:
+                get_followers(args_dict['arg'])
+
             if 'r' in args_dict['options']:
                 read_data(args_dict['arg'])
         else:
             print("""
                         Incorrect usage:
-                        app.py [-utr] [screen_name]
+                        app.py [-utfr] [screen_name]
                   """)
 
-# Testing
-# df = pd.read_csv('READ.csv')
-# df['Date'] = df['Date'].astype('datetime64').dt.date
-# from dateutil.relativedelta import relativedelta
-# max_date = df['Date'].max()
-# min_date = df['Date'].min()
-# diff_date = max_date - min_date
-# rdelta = relativedelta(max_date, min_date)
 
-# total_month = rdelta.years * 12 + rdelta.months
-# print(total_month)
-# plt.hist(df.Date, bins=total_month)
-# plt.xticks(fontsize=8)
-# plt.show()
 
 con.close()

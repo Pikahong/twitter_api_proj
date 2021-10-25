@@ -1,8 +1,5 @@
-from os import terminal_size
 import sys
 import re
-import time
-import json
 from datetime import datetime
 from typing import Counter
 import pandas as pd

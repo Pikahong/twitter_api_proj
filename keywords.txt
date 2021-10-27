@@ -12,3 +12,4 @@ Virus
 Illness
 Dead
 @WHO
+POTUS

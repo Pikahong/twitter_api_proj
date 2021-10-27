@@ -148,7 +148,7 @@ def read_data(screen_name):
 
     sql = \
         f"""
-        SELECT created_at, body FROM tweets
+        SELECT created_at, body, favorite_count, retweet_count FROM tweets
             WHERE UPPER(screen_name)=UPPER('{screen_name}')
             AND ({sql_keywords})
         """
@@ -159,11 +159,11 @@ def read_data(screen_name):
         cur.execute(sql)
         result = cur.fetchall()
         
-        df = pd.DataFrame(result, columns=['Date', 'Result'])
+        df = pd.DataFrame(result, columns=['Date', 'Result', 'favorite_count', 'retweet_count'])
         df['Date'] = df['Date'].astype('datetime64')
         df.set_index('Date', inplace=True)
         df['Keywords'] = df['Result'].apply(lambda row: _get_keywords(row))
-        df.to_csv("READ.csv", index=False)
+        df.to_csv("READ.csv", index=True)
         print(df)
 
         # count the keywords
@@ -171,14 +171,16 @@ def read_data(screen_name):
         for kws in df.Keywords:
             for kw in kws.split(','):
                 cnt[kw] += 1
-        print(dict(cnt))
 
-        # Visualize the top 10 keywords
-        cnt_top10 = dict(cnt.most_common(10))
-        plt.bar(cnt_top10.keys(), cnt_top10.values())
-        plt.title('Top 10 Occurrence of Keywords')
-        plt.xlabel('Keywords')
-        plt.ylabel('Count')
+        # Convert counter to dataframe
+        pd_cnt = pd.DataFrame.from_dict(cnt, orient='index').reset_index().rename(columns={'index':'Keywords', 0:'Count'})
+        pd_cnt_sorted_desc = pd_cnt.sort_values(by=['Count'], ascending=False).reset_index(drop=True)
+        print(pd_cnt_sorted_desc)
+
+        # Visualize the occurance of the keywords
+        _ = sns.barplot(x='Count', y='Keywords', data=pd_cnt_sorted_desc)
+        _.set(title='Occurrance of Keywords')
+        _ = sns.jointplot(x='favorite_count', y='retweet_count', data=df.reset_index(drop=True))
         plt.show()
 
     except Exception as e:
@@ -189,68 +191,117 @@ def get_followers(screen_name):
     """ Get followers by screen_name """
     followers = defaultdict(list)
 
-    for follower in tweepy.Cursor(api.get_followers, screen_name=screen_name).items():
-        if follower.startwith('Rate limit reached'):
-            print(follower)
-            break
-        else:
-            follower['user_id'].append(follower.id)
-            follower['screen_name'].append(follower.screen_name)
-            follower['name'].append(follower.name)
-            follower['location'].append(follower.location)
-            follower['description'].append(follower.description)
-            follower['followers_count'].append(follower.followers_count)
-            follower['friends_count'].append(follower.friends_count)
-            follower['statuses_count'].append(follower.statuses_count)
+    for follower in tweepy.Cursor(api.get_followers, screen_name=screen_name, count=200).items():
+        followers['follower_screen_name'].append(screen_name)
+        followers['user_id'].append(follower.id)
+        followers['screen_name'].append(follower.screen_name)
+        followers['name'].append(follower.name)
+        followers['location'].append(follower.location)
+        followers['description'].append(follower.description)
+        followers['followers_count'].append(follower.followers_count)
+        followers['friends_count'].append(follower.friends_count)
+        followers['statuses_count'].append(follower.statuses_count)
 
+        if len(followers['user_id']) > 1000:
+            break;
     # Set primary key column as index
-    df = pd.DataFrame(followers).set_index(['user_id'])
+    df = pd.DataFrame(followers).set_index(['follower_screen_name', 'user_id'])
+    df.to_csv('test.csv')
     print(df)
-    # # A temporary table for deleting the existing rows from tweets table
-    # df.to_sql('users_profile_tmp', con, index=True, if_exists='replace')
+    # A temporary table for deleting the existing rows from followers table
+    df.to_sql('followers_tmp', con, index=True, if_exists='replace')
 
-    # try:
-    #     # delete rows that we are going to update
-    #     con.execute(
-    #         'DELETE FROM users_profile WHERE user_id IN (SELECT user_id FROM users_profile_tmp)')
-    #     con.commit()
+    try:
+        # delete rows that we are going to update
+        con.execute(
+            """DELETE FROM followers
+                    WHERE (follower_screen_name, user_id)
+                        IN (SELECT follower_screen_name, user_id FROM followers_tmp)""")
+        con.commit()
 
-    #     # insert and update table
-    #     df.to_sql('users_profile', con, index=True, if_exists='append')
-    # except Exception as e:
-    #     print(e)
-    #     con.rollback()
+        # insert and update table
+        df.to_sql('followers', con, index=True, if_exists='append')
+    except Exception as e:
+        print(e)
+        con.rollback()
 
+def get_friends(screen_name):
+    """ Get friends by screen_name """
+    friends = defaultdict(list)
+
+    for friend in tweepy.Cursor(api.get_friends, screen_name=screen_name, count=200).items():
+        friends['following_screen_name'].append(screen_name)
+        friends['user_id'].append(friend.id)
+        friends['screen_name'].append(friend.screen_name)
+        friends['name'].append(friend.name)
+        friends['location'].append(friend.location)
+        friends['description'].append(friend.description)
+        friends['followers_count'].append(friend.followers_count)
+        friends['friends_count'].append(friend.friends_count)
+        friends['statuses_count'].append(friend.statuses_count)
+
+        if len(friends['user_id']) > 1000:
+            break;
+    # Set primary key column as index
+    df = pd.DataFrame(friends).set_index(['following_screen_name', 'user_id'])
+    df.to_csv('test.csv')
+    print(df)
+    # A temporary table for deleting the existing rows from friends table
+    df.to_sql('friends_tmp', con, index=True, if_exists='replace')
+
+    try:
+        # delete rows that we are going to update
+        con.execute(
+            """DELETE FROM friends
+                    WHERE (following_screen_name, user_id)
+                        IN (SELECT following_screen_name, user_id FROM friends_tmp)""")
+        con.commit()
+
+        # insert and update table
+        df.to_sql('friends', con, index=True, if_exists='append')
+    except Exception as e:
+        print(e)
+        con.rollback()
+    
 
 if __name__ == '__main__':
     # implement a simple command line interface
     if len(sys.argv) == 3:
         args_str = ' '.join(sys.argv[1:])
-        # Regex for matching the pattern : app.py [-utr] [screen_name]
-        r = re.compile('^-(?P<options>[utfr]+)\s+(?P<arg>\w+)$')
+        # Regex for matching the pattern : app.py [-utfra] [screen_name]
+        r = re.compile('^-(?P<options>[utfra]+)\s+(?P<arg>\w+)$')
         m = r.match(args_str)
         # If there are matches
         if m is not None:
             args_dict = m.groupdict()
-            # Get user profile
+            # Get basic user profile
             # usage: python app.py -u [screen_name]
             if 'u' in args_dict['options']:
                 get_users_profile(args_dict['arg'])
 
-            # Get all tweets
+            # Get all tweets up to 3250
             # usage: python app.py -t [screen_name]
             if 't' in args_dict['options']:
                 get_all_tweets(args_dict['arg'])
 
+            # Get 1000 latest followers
+            # usage: python app.py -f [screen_name]
             if 'f' in args_dict['options']:
                 get_followers(args_dict['arg'])
 
+            # Get 1000 latest friends
+            # usage: python app.py -r [screen_name]
             if 'r' in args_dict['options']:
+                get_friends(args_dict['arg'])
+
+            # Read tweets and make simple analysis
+            # usage: python app.py -a [screen_name]
+            if 'a' in args_dict['options']:
                 read_data(args_dict['arg'])
         else:
             print("""
                         Incorrect usage:
-                        app.py [-utfr] [screen_name]
+                        app.py [-utfra] [screen_name]
                   """)
 
 

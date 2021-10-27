@@ -97,7 +97,7 @@ def get_users_profile(screen_name):
     # Set primary key column as index
     df = pd.DataFrame(users).set_index(['user_id'])
     print(df)
-    # A temporary table for deleting the existing rows from tweets table
+    # A temporary table for deleting the existing rows from users_profile table
     df.to_sql('users_profile_tmp', con, index=True, if_exists='replace')
 
     try:

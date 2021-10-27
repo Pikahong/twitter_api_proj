@@ -24,7 +24,8 @@ followers = '''
         followers_count INTEGER,
         friends_count INTEGER,
         statuses_count INTEGER,
-        CONSTRAINT pk_follower PRIMARY KEY (follower_screen_name, user_id)
+        CONSTRAINT pk_follower PRIMARY KEY (follower_screen_name, user_id),
+        CONSTRAINT fk_friends_following_screen_name FOREIGN KEY (follower_screen_name) REFERENCES users_profile(screen_name)
     );
 '''
 
@@ -39,15 +40,16 @@ friends = '''
         followers_count INTEGER,
         friends_count INTEGER,
         statuses_count INTEGER,
-        CONSTRAINT pk_follower PRIMARY KEY (following_screen_name, user_id)
+        CONSTRAINT pk_follower PRIMARY KEY (following_screen_name, user_id),
+        CONSTRAINT fk_friends_following_screen_name FOREIGN KEY (following_screen_name) REFERENCES users_profile(screen_name)
     );
 '''
 
 tweets = '''
     CREATE TABLE IF NOT EXISTS tweets (
         created_at DATETIME NOT NULL,
-        tweet_id NOT NULL,
-        user_id INTEGER NOT NULL,
+        tweet_id INTEGER NOT NULL,
+        tweet_user_id INTEGER NOT NULL,
         screen_name NVARCHAR(32),
         retweet_created_at DATETIME,
         body NVARCHAR(256),
@@ -55,7 +57,7 @@ tweets = '''
         retweet_count INTEGER,
         retweet_screen_name NVARCHAR(32),
         CONSTRAINT pk_tweet PRIMARY KEY (created_at, tweet_id),
-        CONSTRAINT fk_user_id FOREIGN KEY (user_id) REFERENCES user_profiles(user_id)
+        CONSTRAINT fk_tweets_screen_name FOREIGN KEY (screen_name) REFERENCES users_profile(screen_name)
     );
 '''
 

@@ -50,7 +50,7 @@ def get_all_tweets(screen_name):
 
         tweets['tweet_id'].append(status.id)
         tweets['body'].append(status.full_text)
-        tweets['user_id'].append(status.user.id)
+        tweets['tweet_user_id'].append(status.user.id)
         tweets['favorite_count'].append(status.favorite_count)
         tweets['retweet_count'].append(status.retweet_count)
 

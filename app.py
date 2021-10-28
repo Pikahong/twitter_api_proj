@@ -162,7 +162,6 @@ def read_data(screen_name):
         df['Date'] = df['Date'].astype('datetime64')
         df.set_index('Date', inplace=True)
         df['Keywords'] = df['Result'].apply(lambda row: _get_keywords(row))
-        df.to_csv("READ.csv", index=True)
         # print(df)
 
         # count the keywords

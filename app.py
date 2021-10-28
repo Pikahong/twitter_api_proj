@@ -264,40 +264,52 @@ if __name__ == '__main__':
     # implement a simple command line interface
     if len(sys.argv) == 3:
         args_str = ' '.join(sys.argv[1:])
-        # Regex for matching the pattern : app.py [-utfra] [screen_name]
-        r = re.compile('^-(?P<options>[utfra]+)\s+(?P<arg>\w+)$')
+        # Regex for matching the pattern : app.py [-zutfra] [screen_name]
+        r = re.compile('^-(?P<options>[zutfra]+)\s+(?P<arg>\w+)$')
         m = r.match(args_str)
         # If there are matches
         if m is not None:
             args_dict = m.groupdict()
-            # Get basic user profile
-            # usage: python app.py -u [screen_name]
-            if 'u' in args_dict['options']:
+
+            # execute all the below functions
+            # usage: python app.py -z [screen_name]
+            if 'z' in args_dict['options']:
                 get_users_profile(args_dict['arg'])
-
-            # Get all tweets up to 3250
-            # usage: python app.py -t [screen_name]
-            if 't' in args_dict['options']:
                 get_all_tweets(args_dict['arg'])
-
-            # Get 1000 latest followers
-            # usage: python app.py -f [screen_name]
-            if 'f' in args_dict['options']:
                 get_followers(args_dict['arg'])
-
-            # Get 1000 latest friends
-            # usage: python app.py -r [screen_name]
-            if 'r' in args_dict['options']:
                 get_friends(args_dict['arg'])
-
-            # Read tweets and make simple analysis
-            # usage: python app.py -a [screen_name]
-            if 'a' in args_dict['options']:
                 read_data(args_dict['arg'])
+                
+            else:
+                # Get basic user profile
+                # usage: python app.py -u [screen_name]
+                if 'u' in args_dict['options']:
+                    get_users_profile(args_dict['arg'])
+
+                # Get all tweets up to 3250
+                # usage: python app.py -t [screen_name]
+                if 't' in args_dict['options']:
+                    get_all_tweets(args_dict['arg'])
+
+                # Get 1000 latest followers
+                # usage: python app.py -f [screen_name]
+                if 'f' in args_dict['options']:
+                    get_followers(args_dict['arg'])
+
+                # Get 1000 latest friends
+                # usage: python app.py -r [screen_name]
+                if 'r' in args_dict['options']:
+                    get_friends(args_dict['arg'])
+
+                # Read tweets and make simple analysis
+                # usage: python app.py -a [screen_name]
+                if 'a' in args_dict['options']:
+                    read_data(args_dict['arg'])
+
         else:
             print("""
                         Incorrect usage:
-                        app.py [-utfra] [screen_name]
+                        app.py [-zutfra] [screen_name]
                   """)
 
 

@@ -15,22 +15,6 @@ users_profile = '''
 
 followers = '''
     CREATE TABLE IF NOT EXISTS followers (
-        follower_screen_name NVARCHAR(32) NOT NULL,
-        user_id INTEGER NOT NULL,
-        screen_name NVARCHAR(32),
-        name NVARCHAR(32),
-        location NVARCHAR(256),
-        description NVARCHAR(256),
-        followers_count INTEGER,
-        friends_count INTEGER,
-        statuses_count INTEGER,
-        CONSTRAINT pk_follower PRIMARY KEY (follower_screen_name, user_id),
-        CONSTRAINT fk_friends_following_screen_name FOREIGN KEY (follower_screen_name) REFERENCES users_profile(screen_name)
-    );
-'''
-
-friends = '''
-    CREATE TABLE IF NOT EXISTS friends (
         following_screen_name NVARCHAR(32) NOT NULL,
         user_id INTEGER NOT NULL,
         screen_name NVARCHAR(32),
@@ -42,6 +26,22 @@ friends = '''
         statuses_count INTEGER,
         CONSTRAINT pk_follower PRIMARY KEY (following_screen_name, user_id),
         CONSTRAINT fk_friends_following_screen_name FOREIGN KEY (following_screen_name) REFERENCES users_profile(screen_name)
+    );
+'''
+
+friends = '''
+    CREATE TABLE IF NOT EXISTS friends (
+        follower_screen_name NVARCHAR(32) NOT NULL,
+        user_id INTEGER NOT NULL,
+        screen_name NVARCHAR(32),
+        name NVARCHAR(32),
+        location NVARCHAR(256),
+        description NVARCHAR(256),
+        followers_count INTEGER,
+        friends_count INTEGER,
+        statuses_count INTEGER,
+        CONSTRAINT pk_follower PRIMARY KEY (follower_screen_name, user_id),
+        CONSTRAINT fk_friends_follower_screen_name FOREIGN KEY (follower_screen_name) REFERENCES users_profile(screen_name)
     );
 '''
 
